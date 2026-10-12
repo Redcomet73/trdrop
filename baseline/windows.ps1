@@ -308,7 +308,6 @@ if ((Get-Item -LiteralPath $platformPlugin).Length -eq 0) {
 }
 
 Native "$qt/bin/windeployqt.exe" @(
-    '--release',
     '--verbose', '2',
     '--qmldir', "$work/original/trdrop",
     "$bin/trdrop-original.exe"
