@@ -1,105 +1,169 @@
-name: (Windows x64) Build and publish
+name: Windows x64 frozen reference
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-  build:
-    runs-on: windows-latest
+  reference:
+    runs-on: windows-2022
+    timeout-minutes: 60
+
+    env:
+      PYTHONNOUSERSITE: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+      PIP_DISABLE_PIP_VERSION_CHECK: '1'
+      PIP_REQUIRE_VIRTUALENV: '1'
+      PIP_INDEX_URL: https://pypi.org/simple
+      PIP_CACHE_DIR: ${{ runner.temp }}/pip-cache
+      TMP: ${{ runner.temp }}
+      TEMP: ${{ runner.temp }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Get short SHA and set Qt + OpenCV version
-        run: |
-          echo "SHORT_SHA=$($env:GITHUB_SHA.SubString(0,7))" >> $env:GITHUB_ENV
-          echo qtver=5.15.2 >> $env:GITHUB_ENV
-          echo opencv_ver=4.5.1 >> $env:GITHUB_ENV
-
-      - name: Cache Object files
-        uses: actions/cache@v1
-        id: cache1
+      - name: Checkout build infrastructure and frozen Git objects
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          path: C:\build_temp
-          key: ${{ runner.os }}-ObjectFilesCache
+          fetch-depth: 0
+          persist-credentials: false
 
-      - name: Restore cache
-        if: steps.cache1.outputs.cache-hit == 'true'
-        run: |
-          mkdir release
-          cd c:\build_temp
-          Copy-Item *.o, *.c, *.cpp, *.h ${env:GITHUB_WORKSPACE}\release
-
-      - name: Download Precompiled OpenCV libs
-        run: |
-          mkdir C:\downloads
-          $opencv_ver1=${env:opencv_ver}
-          curl -fL https://github.com/illusion0001/opencv-build/releases/download/${opencv_ver1}/opencv-${opencv_ver1}.7z -o C:\downloads\opencv-${opencv_ver1}.7z
-          7z -r x C:\downloads\opencv-${opencv_ver1}.7z -oc:\downloads\
-
-      - name: Cache Qt
-        id: cache-qt
-        uses: actions/cache@v1
-        with:
-          path: C:\Qt
-          key: ${{ runner.os }}-Qt-Cache
-
-      - name: Download Qt
-        uses: jurplel/install-qt-action@v2
-        with:
-          cached: ${{ steps.cache-qt.outputs.cache-hit }}
-          version: ${{ env.qtver }}
-          arch: win64_mingw81
-          dir: C:\
-          tools: tools_ifw,4.1.1,qt.tools.ifw.41 tools_qtcreator,5.0.2-0,qt.tools.qtcreator,qt.tools.
-
-      - name: Add Qt and MinGW to environment variable
-        run: |
-          $qtver1=$env:qtver
-          $opencv_ver1=${env:opencv_ver}
-          echo Qt_Install="C:\Qt" >> $env:GITHUB_ENV
-          echo OpenCV_DIR="C:\downloads\opencv-${opencv_ver1}" >> $env:GITHUB_ENV
-          echo MinGWBin="C:\msys64\mingw64\bin" >> $env:GITHUB_ENV
-
-      - name: Build Trdrop
-        run: |
-          qmake -o Makefile trdrop\trdrop.pro -spec win32-g++ "CONFIG+=qtquickcompiler" "OBJECTS_DIR=C:\build_temp" "MOC_DIR=C:\build_temp"
-          mingw32-make -f Makefile.Release
-
-      - name: Cleanup object files
-        run: |
-          cd release
-          Move-Item -Force *.o, *.c, *.cpp, *.h C:\build_temp
-
-      - name: Prepare trdrop for artifact
-        run: |
-          cd $env:MinGWBin
-          copy-item libgcc_s_seh-1.dll, libstdc++-6.dll, libwinpthread-1.dll, libgomp-1.dll $env:GITHUB_WORKSPACE\release
-          cd $env:OpenCV_DIR\build_64\install\x64\mingw\bin
-          copy-item libopencv_core451.dll, libopencv_imgcodecs451.dll, libopencv_imgproc451.dll, libopencv_videoio451.dll, opencv_videoio_ffmpeg451_64.dll $env:GITHUB_WORKSPACE\release
-          windeployqt --qmldir $env:GITHUB_WORKSPACE $env:GITHUB_WORKSPACE\release
-
-      - name: Cleanup for packaging
-        run: |
-          cd release
-          Remove-Item -Recurse -Force audio, bearer, iconengines, mediaservice, playlistformats, qmltooling, QtGraphicalEffects, styles, translations, D3Dcompiler_47.dll, opengl32sw.dll, libGLESv2.dll
-
-      - name: Create Release Archive
-        run: |
-          cd release
-          7z a -m0=LZMA2 -mx9 ..\trdrop-release-${env:SHORT_SHA}.7z
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: trdrop-release-${{ env.SHORT_SHA }}
-          path: release/*
-          if-no-files-found: error
-          retention-days: 90
-
-      - name: Upload Release
+      - name: Select exact Python
+        id: python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: github.event_name != 'pull_request'
-        run: gh release create $env:SHORT_SHA "trdrop-release-$env:SHORT_SHA.7z" --target $env:GITHUB_SHA -t "Trdrop Release - $env:SHORT_SHA"
+          PIP_REQUIRE_VIRTUALENV: '0'
+        with:
+          python-version: '3.13.15'
+          architecture: x64
+          check-latest: false
+          token: ''
 
+      - name: Verify selected Python and prepare locked helper environment
+        shell: pwsh
+        env:
+          SELECTED_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+          if (!$env:SELECTED_PYTHON) {
+              throw 'setup-python did not return an executable'
+          }
+          $selected = (Resolve-Path -LiteralPath $env:SELECTED_PYTHON).Path
+          $probe = 'import json,platform,struct,sys; print(json.dumps({"version":platform.python_version(),"bits":struct.calcsize("P")*8,"machine":platform.machine(),"executable":sys.executable,"implementation":platform.python_implementation()}))'
+          $raw = & $selected -I -c $probe
+          if ($LASTEXITCODE -ne 0) { throw 'Selected Python probe failed' }
+          $info = $raw | ConvertFrom-Json
+          if ($info.version -ne '3.13.15' -or
+              $info.bits -ne 64 -or
+              $info.machine -notin @('AMD64', 'x86_64') -or
+              $info.implementation -ne 'CPython' -or
+              (Resolve-Path -LiteralPath $info.executable).Path -ne $selected) {
+              throw 'Selected Python identity mismatch'
+          }
+
+          $provenance = Join-Path $env:RUNNER_TEMP 'selected-python.json'
+          @{
+              version = $info.version
+              bits = $info.bits
+              machine = $info.machine
+              implementation = $info.implementation
+              executable = $selected
+              sha256 = (Get-FileHash -LiteralPath $selected -Algorithm SHA256).Hash.ToLowerInvariant()
+              provider_commit = '5fda3b95a4ea91299a34e894583c3862153e4b97'
+          } | ConvertTo-Json | Set-Content $provenance -Encoding utf8
+
+          $venv = Join-Path $env:RUNNER_TEMP 'trdrop-python'
+          if (Test-Path -LiteralPath $venv) {
+              throw "Refusing to reuse helper environment: $venv"
+          }
+          & $selected -I -m venv $venv
+          if ($LASTEXITCODE -ne 0) { throw 'Virtual environment creation failed' }
+
+          $helper = Join-Path $venv 'Scripts/python.exe'
+          $lock = Join-Path $env:GITHUB_WORKSPACE 'baseline/python-win64.lock'
+          $constraints = Join-Path $env:RUNNER_TEMP 'python-constraints.txt'
+          $report = Join-Path $env:RUNNER_TEMP 'python-install-report.json'
+
+          # Derive exact constraints from the single reviewed lock file.
+          $pins = foreach ($line in Get-Content -LiteralPath $lock) {
+              if (!$line.Trim() -or $line.TrimStart().StartsWith('#')) { continue }
+              if ($line -notmatch '^([A-Za-z0-9_.-]+==[A-Za-z0-9_.+!-]+) --hash=sha256:[0-9a-f]{64}$') {
+                  throw "Invalid lock entry: $line"
+              }
+              $Matches[1]
+          }
+          $pins | Set-Content $constraints -Encoding ascii
+
+          # All third-party packages, including pip itself, are exact and hashed.
+          # Wheels only: no source builds or build-time dependency resolution.
+          & $helper -m pip install --require-hashes --only-binary=:all: --no-cache-dir --force-reinstall --report $report -r $lock
+          if ($LASTEXITCODE -ne 0) { throw 'Locked helper installation failed' }
+          & $helper -m pip check
+          if ($LASTEXITCODE -ne 0) { throw 'Helper dependency check failed' }
+
+          "$venv/Scripts" >> $env:GITHUB_PATH
+          "VIRTUAL_ENV=$venv" >> $env:GITHUB_ENV
+          "BASELINE_PYTHON=$helper" >> $env:GITHUB_ENV
+          "BASELINE_BASE_PYTHON=$selected" >> $env:GITHUB_ENV
+          "BASELINE_PYTHON_PROVENANCE=$provenance" >> $env:GITHUB_ENV
+          "BASELINE_PYTHON_INSTALL_REPORT=$report" >> $env:GITHUB_ENV
+          "PIP_CONSTRAINT=$constraints" >> $env:GITHUB_ENV
+          "PIP_NO_INDEX=1" >> $env:GITHUB_ENV
+
+      - name: Verify Python PATH before Qt action
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $resolved = (Get-Command python -CommandType Application).Source
+          if ((Resolve-Path -LiteralPath $resolved).Path -ne
+              (Resolve-Path -LiteralPath $env:BASELINE_PYTHON).Path) {
+              throw 'Qt action would resolve the wrong Python interpreter'
+          }
+          python -m pip --version
+          if ($LASTEXITCODE -ne 0) { throw 'Virtualenv pip invocation failed' }
+
+      # Use the pinned executable sub-action: the root composite uses
+      # floating child-action references.
+      - name: Install historical Qt and matching compiler
+        uses: jurplel/install-qt-action/action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4.3.1
+        with:
+          version: '5.15.2'
+          host: windows
+          target: desktop
+          arch: win64_mingw81
+          tools: 'tools_mingw,8.1.0,qt.tools.win64_mingw810'
+          dir: ${{ runner.temp }}
+          install-deps: false
+          cache: false
+          use-official: false
+          aqtversion: '==3.3.0'
+          py7zrversion: '==1.1.3'
+          add-tools-to-path: true
+          set-env: true
+
+      - name: Build, capture and compare original reference
+        shell: pwsh
+        run: ./baseline/windows.ps1
+
+      - name: Preserve build outputs and diagnostic evidence
+        if: always()
+        id: artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: trdrop-reference-win64-a0b4563-${{ github.run_id }}-${{ github.run_attempt }}
+          path: reference-artifact/
+          if-no-files-found: warn
+          retention-days: 90
+          compression-level: 6
+          include-hidden-files: false
+
+      - name: Artifact location
+        if: always()
+        shell: pwsh
+        env:
+          ARTIFACT_URL: ${{ steps.artifact.outputs.artifact-url }}
+        run: |
+          "Reference artifact (may contain partial failure evidence): $env:ARTIFACT_URL" >> $env:GITHUB_STEP_SUMMARY
