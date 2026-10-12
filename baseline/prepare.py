@@ -216,7 +216,10 @@ def prepare(repo, dest):
     expected = expected_manifest(repo)
 
     dest.mkdir(parents=True, exist_ok=False)
-    archive = git_bytes(repo, "archive", "--format=tar", SOURCE)
+    archive = git_bytes(
+        repo, "-c", "core.autocrlf=false",
+        "archive", "--format=tar", SOURCE
+    )
     original = dest / "original"
     original.mkdir()
 
