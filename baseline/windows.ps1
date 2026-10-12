@@ -363,6 +363,5 @@ Get-ChildItem -LiteralPath $artifact -Recurse -File |
 
 if ($env:GITHUB_STEP_SUMMARY) {
     "Frozen Windows x64 application and reference drivers built. Deterministic repeat and profiling-on/off trace comparisons passed. Interactive QML/video scheduling not tested. Source: $source." >> $env:GITHUB_STEP_SUMMARY
-    Get-Content "$artifact/lean-profile/pipeline_csv/timings.json" >>
-        $env:GITHUB_STEP_SUMMARY
+    Get-Content "$artifact/lean-profile/pipeline_csv/timings.json" >> $env:GITHUB_STEP_SUMMARY
 }
