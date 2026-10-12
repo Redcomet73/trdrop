@@ -19,11 +19,17 @@ jobs:
       PIP_DISABLE_PIP_VERSION_CHECK: '1'
       PIP_REQUIRE_VIRTUALENV: '1'
       PIP_INDEX_URL: https://pypi.org/simple
-      PIP_CACHE_DIR: ${{ runner.temp }}/pip-cache
-      TMP: ${{ runner.temp }}
-      TEMP: ${{ runner.temp }}
 
     steps:
+      - name: Configure temporary directories
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (!$env:RUNNER_TEMP) { throw 'RUNNER_TEMP is required' }
+          "PIP_CACHE_DIR=$(Join-Path $env:RUNNER_TEMP 'pip-cache')" >> $env:GITHUB_ENV
+          "TMP=$env:RUNNER_TEMP" >> $env:GITHUB_ENV
+          "TEMP=$env:RUNNER_TEMP" >> $env:GITHUB_ENV
+
       - name: Checkout build infrastructure and frozen Git objects
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
