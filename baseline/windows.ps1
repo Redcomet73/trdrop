@@ -281,8 +281,35 @@ foreach ($dll in @(
 )) {
     Copy-Item "$mingw/$dll" $bin
 }
+$expectedQmake = (Resolve-Path -LiteralPath $qmake).ProviderPath
+$pathQmake = Get-Command qmake -CommandType Application -TotalCount 1 -ErrorAction Stop
+Write-Host "Expected frozen Qt qmake executable: $expectedQmake"
+Write-Host "PATH-selected qmake executable: $($pathQmake.Source)"
+$expectedPlugins = Join-Path $qt 'plugins'
+$reportedPlugins = Capture $expectedQmake @('-query', 'QT_INSTALL_PLUGINS')
+$pathPlugins = Capture 'qmake' @('-query', 'QT_INSTALL_PLUGINS')
+$platformPlugin = Join-Path $expectedPlugins 'platforms/qwindows.dll'
+Write-Host "Frozen qmake QT_INSTALL_PLUGINS: $reportedPlugins"
+Write-Host "Bare qmake QT_INSTALL_PLUGINS: $pathPlugins"
+if ($reportedPlugins.Replace('\', '/').TrimEnd('/') -ine
+    $pathPlugins.Replace('\', '/').TrimEnd('/')) {
+    Write-Warning "qmake plugin directories differ: frozen='$reportedPlugins'; PATH='$pathPlugins'"
+}
+Write-Host "Expected Windows platform plugin: $platformPlugin"
+$qtConf = Join-Path $qt 'bin/qt.conf'
+if (Test-Path -LiteralPath $qtConf -PathType Leaf) {
+    Get-Content -LiteralPath $qtConf
+}
+if (!(Test-Path -LiteralPath $platformPlugin -PathType Leaf)) {
+    throw "Historical Qt Windows platform plugin is missing: $platformPlugin"
+}
+if ((Get-Item -LiteralPath $platformPlugin).Length -eq 0) {
+    throw "Historical Qt Windows platform plugin is empty: $platformPlugin"
+}
+
 Native "$qt/bin/windeployqt.exe" @(
     '--release',
+    '--verbose', '2',
     '--qmldir', "$work/original/trdrop",
     "$bin/trdrop-original.exe"
 )
