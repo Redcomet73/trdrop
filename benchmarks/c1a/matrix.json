@@ -1,0 +1,432 @@
+{
+  "schema_version": 1,
+  "protocol": {
+    "warmup": {
+      "minimum_batches": 120,
+      "ring_multiples": 2
+    },
+    "measured_trials": 7,
+    "percentile_method": "nearest_rank",
+    "required_metrics": {
+      "decode": [
+        "cpu",
+        "memory",
+        "threads",
+        "latency.acquisition"
+      ],
+      "analysis": [
+        "cpu",
+        "memory",
+        "threads",
+        "latency.analysis"
+      ],
+      "headless_pipeline": [
+        "cpu",
+        "memory",
+        "threads",
+        "latency.processing"
+      ],
+      "gui_pipeline": [
+        "cpu",
+        "memory",
+        "threads",
+        "latency.processing",
+        "latency.gui_delivery"
+      ]
+    },
+    "thread_policy": {
+      "openmp_threads": 1,
+      "opencv_threads": 1,
+      "dynamic": false,
+      "nested": false
+    },
+    "analysis_options": {
+      "pixel_threshold": 0,
+      "tear_dismiss_percent": 10,
+      "delta_rendering": false,
+      "centering": false,
+      "draw_tears": true
+    }
+  },
+  "axes": {
+    "resolutions": {
+      "720p": {
+        "width": 1280,
+        "height": 720
+      },
+      "1080p": {
+        "width": 1920,
+        "height": 1080
+      },
+      "1440p": {
+        "width": 2560,
+        "height": 1440
+      },
+      "4k": {
+        "width": 3840,
+        "height": 2160
+      }
+    },
+    "video_counts": [
+      1,
+      2,
+      3
+    ],
+    "fps": {
+      "24": {
+        "numerator": 24,
+        "denominator": 1
+      },
+      "30": {
+        "numerator": 30,
+        "denominator": 1
+      },
+      "60": {
+        "numerator": 60,
+        "denominator": 1
+      },
+      "120": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "240": {
+        "numerator": 240,
+        "denominator": 1
+      },
+      "2997": {
+        "numerator": 30000,
+        "denominator": 1001
+      },
+      "5994": {
+        "numerator": 60000,
+        "denominator": 1001
+      }
+    },
+    "exports": [
+      "none",
+      "csv",
+      "jpeg",
+      "csv_jpeg"
+    ],
+    "patterns": [
+      "identical",
+      "alternating",
+      "periodic_duplicates",
+      "sparse_change",
+      "tear_heavy"
+    ],
+    "preview": [
+      "absent",
+      "enabled",
+      "disabled"
+    ]
+  },
+  "families": [
+    {
+      "id": "mandatory",
+      "classification": "mandatory",
+      "workload": "headless_pipeline",
+      "input_resolutions": [
+        "720p",
+        "1080p",
+        "1440p",
+        "4k"
+      ],
+      "output_resolution": "match_input",
+      "video_counts": [
+        1,
+        2,
+        3
+      ],
+      "fps": [
+        "60"
+      ],
+      "exports": [
+        "none",
+        "csv",
+        "jpeg",
+        "csv_jpeg"
+      ],
+      "patterns": [
+        "periodic_duplicates"
+      ],
+      "preview": [
+        "absent"
+      ],
+      "batch_policy": "complete_synchronized"
+    },
+    {
+      "id": "fps",
+      "classification": "exploratory",
+      "workload": "headless_pipeline",
+      "input_resolutions": [
+        "720p",
+        "1080p",
+        "1440p",
+        "4k"
+      ],
+      "output_resolution": "match_input",
+      "video_counts": [
+        1,
+        2,
+        3
+      ],
+      "fps": [
+        "24",
+        "30",
+        "120",
+        "240",
+        "2997",
+        "5994"
+      ],
+      "exports": [
+        "none"
+      ],
+      "patterns": [
+        "periodic_duplicates"
+      ],
+      "preview": [
+        "absent"
+      ],
+      "batch_policy": "complete_synchronized"
+    },
+    {
+      "id": "analysis",
+      "classification": "exploratory",
+      "workload": "analysis",
+      "input_resolutions": [
+        "720p",
+        "1080p",
+        "1440p",
+        "4k"
+      ],
+      "output_resolution": "match_input",
+      "video_counts": [
+        1,
+        2,
+        3
+      ],
+      "fps": [
+        "24",
+        "30",
+        "60",
+        "120",
+        "240",
+        "2997",
+        "5994"
+      ],
+      "exports": [
+        "none"
+      ],
+      "patterns": [
+        "identical",
+        "alternating",
+        "periodic_duplicates",
+        "sparse_change",
+        "tear_heavy"
+      ],
+      "preview": [
+        "absent"
+      ],
+      "batch_policy": "complete_synchronized"
+    },
+    {
+      "id": "decode",
+      "classification": "exploratory",
+      "workload": "decode",
+      "input_resolutions": [
+        "720p",
+        "1080p",
+        "1440p",
+        "4k"
+      ],
+      "output_resolution": "match_input",
+      "video_counts": [
+        1,
+        2,
+        3
+      ],
+      "fps": [
+        "24",
+        "30",
+        "60",
+        "120",
+        "240",
+        "2997",
+        "5994"
+      ],
+      "exports": [
+        "none"
+      ],
+      "patterns": [
+        "periodic_duplicates"
+      ],
+      "preview": [
+        "absent"
+      ],
+      "batch_policy": "complete_synchronized"
+    },
+    {
+      "id": "gui",
+      "classification": "exploratory",
+      "workload": "gui_pipeline",
+      "input_resolutions": [
+        "720p",
+        "1080p",
+        "1440p",
+        "4k"
+      ],
+      "output_resolution": "match_input",
+      "video_counts": [
+        1,
+        2,
+        3
+      ],
+      "fps": [
+        "60"
+      ],
+      "exports": [
+        "none",
+        "csv",
+        "jpeg",
+        "csv_jpeg"
+      ],
+      "patterns": [
+        "periodic_duplicates"
+      ],
+      "preview": [
+        "enabled",
+        "disabled"
+      ],
+      "batch_policy": "complete_synchronized"
+    },
+    {
+      "id": "scaling",
+      "classification": "exploratory",
+      "workload": "headless_pipeline",
+      "input_resolutions": [
+        "720p",
+        "1440p",
+        "4k"
+      ],
+      "output_resolution": "1080p",
+      "video_counts": [
+        1,
+        2,
+        3
+      ],
+      "fps": [
+        "60"
+      ],
+      "exports": [
+        "none",
+        "csv",
+        "jpeg",
+        "csv_jpeg"
+      ],
+      "patterns": [
+        "periodic_duplicates"
+      ],
+      "preview": [
+        "absent"
+      ],
+      "batch_policy": "complete_synchronized"
+    },
+    {
+      "id": "patterns",
+      "classification": "exploratory",
+      "workload": "headless_pipeline",
+      "input_resolutions": [
+        "720p",
+        "1080p",
+        "1440p",
+        "4k"
+      ],
+      "output_resolution": "match_input",
+      "video_counts": [
+        1,
+        2,
+        3
+      ],
+      "fps": [
+        "60"
+      ],
+      "exports": [
+        "none",
+        "csv",
+        "jpeg",
+        "csv_jpeg"
+      ],
+      "patterns": [
+        "identical",
+        "alternating",
+        "sparse_change",
+        "tear_heavy"
+      ],
+      "preview": [
+        "absent"
+      ],
+      "batch_policy": "complete_synchronized"
+    },
+    {
+      "id": "partial",
+      "classification": "exploratory",
+      "workload": "decode",
+      "input_resolutions": [
+        "720p",
+        "1080p",
+        "1440p",
+        "4k"
+      ],
+      "output_resolution": "match_input",
+      "video_counts": [
+        1,
+        2,
+        3
+      ],
+      "fps": [
+        "60"
+      ],
+      "exports": [
+        "none"
+      ],
+      "patterns": [
+        "periodic_duplicates"
+      ],
+      "preview": [
+        "absent"
+      ],
+      "batch_policy": "partial_decode"
+    },
+    {
+      "id": "eof",
+      "classification": "exploratory",
+      "workload": "decode",
+      "input_resolutions": [
+        "720p",
+        "1080p",
+        "1440p",
+        "4k"
+      ],
+      "output_resolution": "match_input",
+      "video_counts": [
+        1,
+        2,
+        3
+      ],
+      "fps": [
+        "60"
+      ],
+      "exports": [
+        "none"
+      ],
+      "patterns": [
+        "periodic_duplicates"
+      ],
+      "preview": [
+        "absent"
+      ],
+      "batch_policy": "eof_probe"
+    }
+  ]
+}
